@@ -20,73 +20,86 @@ jobs:
 
     steps:
 
-      - name: 1 - Descargar repositorio
+      - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: 2 - Configurar Java 17
-        uses: actions/setup-java@v4
+      - name: Configurar Java 17
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
 
-      - name: 3 - Configurar Android SDK
+      - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: 4 - Instalar SDK Android 35
+      - name: Instalar SDK Android 35
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
+          yes | sdkmanager --licenses || true
           sdkmanager "platforms;android-35"
           sdkmanager "build-tools;35.0.0"
 
-      - name: 5 - Instalar Gradle 8.7
+      - name: Instalar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
 
-      - name: 6 - Verificar proyecto
+      - name: Verificar proyecto
         run: |
-          echo "Directorio:"
+          echo "=== DIRECTORIO ==="
           pwd
-          echo ""
-          echo "Contenido:"
-          ls -la
-          echo ""
-          echo "Aplicación:"
-          ls -la app
-          echo ""
-          echo "Configuración:"
-          cat settings.gradle.kts
+          echo "=== ARCHIVOS ==="
+          find . -maxdepth 3 -type f | sort
 
-      - name: 7 - Limpiar proyecto
+      - name: Limpiar
         run: |
           gradle clean --stacktrace
 
-      - name: 8 - Compilar APK Release
-        id: build_apk
+      - name: Compilar APK
+        id: build
+        continue-on-error: true
         run: |
-          gradle assembleRelease --stacktrace --info
+          set -o pipefail
+          gradle assembleRelease --stacktrace --info 2>&1 | tee ferraripos-build.log
+          exit ${PIPESTATUS[0]}
 
-      - name: 9 - Buscar APK
-        if: always()
+      - name: Mostrar error real
+        if: steps.build.outcome == 'failure'
+        working-directory: FerrariPOS.Mobile/Android
         run: |
-          echo "Buscando APK..."
+          echo "========================================"
+          echo "       ERROR DE COMPILACION"
+          echo "========================================"
+          echo ""
+          grep -n -E "What went wrong|Caused by:|error:|ERROR|FAILURE:" ferraripos-build.log | tail -100 || true
+          echo ""
+          echo "========================================"
+          echo "       ULTIMAS 150 LINEAS"
+          echo "========================================"
+          tail -150 ferraripos-build.log
+
+      - name: Guardar diagnóstico completo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FerrariPOS-Diagnostico
+          path: FerrariPOS.Mobile/Android/ferraripos-build.log
+          if-no-files-found: warn
+
+      - name: Buscar APK
+        if: always()
+        working-directory: FerrariPOS.Mobile/Android
+        run: |
+          echo "=== APK ENCONTRADOS ==="
           find . -type f -name "*.apk" -print || true
 
-      - name: 10 - Guardar APK
-        if: success()
+      - name: Publicar APK
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: FerrariPOS-Android-APK
           path: FerrariPOS.Mobile/Android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
-      - name: 11 - Guardar diagnóstico de Gradle
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: FerrariPOS-Gradle-Diagnostico
-          path: |
-            FerrariPOS.Mobile/Android/**/*.log
-            FerrariPOS.Mobile/Android/**/build/reports/**
-          if-no-files-found: warn
+      - name: Finalizar
+        if: steps.build.outcome == 'failure'
+        run: exit 1
