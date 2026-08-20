@@ -1,18 +1,17 @@
-name: FerrariPOS Android APK
+name: Compilar FerrariPOS Android
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-      - master
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Compilar FerrariPOS Android
+    name: Generar APK
     runs-on: ubuntu-latest
 
     steps:
@@ -20,28 +19,28 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar JDK 17
+      - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
 
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Instalar Android SDK 35
+      - name: Instalar SDK Android
         run: |
           sdkmanager "platforms;android-35"
           sdkmanager "build-tools;35.0.0"
 
-      - name: Dar permisos a Gradle
-        working-directory: FerrariPOS.Mobile/Android
-        run: chmod +x gradlew || true
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
       - name: Compilar APK Release
         working-directory: FerrariPOS.Mobile/Android
-        run: ./gradlew assembleRelease --stacktrace
+        run: gradle assembleRelease --stacktrace
 
       - name: Publicar APK
         uses: actions/upload-artifact@v4
