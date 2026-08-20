@@ -1,0 +1,76 @@
+workflows:
+  ferraripos-android:
+    name: FerrariPOS Android APK
+    max_build_duration: 60
+    instance_type: linux_x2
+
+    environment:
+      java: 17
+
+    scripts:
+      - name: Configurar Android SDK
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/FerrariPOS.Mobile/Android/local.properties"
+
+      - name: Verificar proyecto
+        script: |
+          cd "$CM_BUILD_DIR/FerrariPOS.Mobile/Android"
+          echo "Directorio actual:"
+          pwd
+          echo ""
+          echo "Archivos:"
+          ls -la
+          echo ""
+          echo "Aplicación:"
+          ls -la app
+
+      - name: Configurar Java 17 para Android
+        script: |
+          cd "$CM_BUILD_DIR/FerrariPOS.Mobile/Android"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("app/build.gradle.kts")
+          text = p.read_text()
+
+          if "compileOptions" not in text:
+              text = text.replace(
+                  "    defaultConfig {",
+                  """    compileOptions {
+                      sourceCompatibility = JavaVersion.VERSION_17
+                      targetCompatibility = JavaVersion.VERSION_17
+                  }
+
+                  kotlinOptions {
+                      jvmTarget = "17"
+                  }
+
+                  defaultConfig {"""
+              )
+
+          p.write_text(text)
+          PY
+
+          echo "Configuración Java/Kotlin:"
+          grep -n -A10 "compileOptions" app/build.gradle.kts || true
+
+      - name: Compilar APK Release
+        script: |
+          cd "$CM_BUILD_DIR/FerrariPOS.Mobile/Android"
+
+          gradle assembleRelease \
+            --stacktrace \
+            --info
+
+    artifacts:
+      - FerrariPOS.Mobile/Android/app/build/outputs/apk/release/*.apk
+      - FerrariPOS.Mobile/Android/app/build/outputs/**/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - "$CM_BUILD_OWNER_EMAIL"
+        notify:
+          success: true
+          failure: true
