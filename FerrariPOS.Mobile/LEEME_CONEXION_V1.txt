@@ -1,0 +1,11 @@
+FERRARIPOS MANAGER - PRIMERA CONEXION REAL
+
+1) En la PC donde esta FerrariPOS, ejecutar INICIAR_API_LAN.bat.
+2) Cambiar API/SyncAgent/appsettings.json para que ApiUrl apunte a la IP de esa PC:
+   http://IP-DE-LA-PC:5080/api/sync/snapshot
+3) Usar el mismo CompanyId y ApiToken en API/appsettings.json y SyncAgent/appsettings.json.
+4) Ejecutar INICIAR_SYNC_WINDOWS.bat.
+5) En Android, colocar http://IP-DE-LA-PC:5080/ como URL de API y el mismo token.
+6) Pulsar Actualizar.
+
+IMPORTANTE: esta V1 de LAN usa HTTP solo para pruebas en red local. Para uso por Internet hay que publicar la API con HTTPS y autenticacion segura.
