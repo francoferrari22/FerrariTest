@@ -67,10 +67,4 @@ workflows:
       - FerrariPOS.Mobile/Android/app/build/outputs/apk/release/*.apk
       - FerrariPOS.Mobile/Android/app/build/outputs/**/*.apk
 
-    publishing:
-      email:
-        recipients:
-          - "$CM_BUILD_OWNER_EMAIL"
-        notify:
-          success: true
-          failure: true
+
